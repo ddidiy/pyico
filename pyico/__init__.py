@@ -118,22 +118,25 @@ class ReaderIco( Reader ):
     oReader = Reader( arg.data_s )
     assert BITMAPINFOHEADER_SIZE == oReader.read( '<I' )
     nWidth, nHeight = oReader.read( '<II' )
+    ##! Height counts alpha channel mask as a separate image.
+    nHeight = nWidth
     ##  Number of color planes.
     assert 1 == oReader.read( '<H' )
     nBpp = oReader.read( '<H' )
     assert nBpp in [ 1, 4, 8, 16, 24, 32 ]
     nCompression = oReader.read( '<I' )
     nImageSize = oReader.read( '<I' )
+    ##  Bytes in horizontal line in image.
+    nLineSize = ((nWidth * nBpp) / 8) or 1
+    ##! Lines are 4-byte aligned.
+    nLineSize += nLineSize % 4
     ##  Can be 0 for uncompressed bitmaps.
     if 0 == nImageSize:
-      nLineSize = (nWidth / nBpp)
-      ##  Rows are 4-byte aligned.
-      nLineSize += nLineSize % 4
       nImageSize = nLineSize * nHeight
     nResolutionCx, nResolutionCy = oReader.read( '<ii' )
     nColorsInPalette = oReader.read( '<I' )
     if 0 == nColorsInPalette and nBpp <= 8:
-      nColorsInPalette = pow( 2, 4 )
+      nColorsInPalette = pow( 2, nBpp )
     nColorsInPaletteImportant = oReader.read( '<I' )
 
     sPalette = oReader.readArray( nColorsInPalette * 4 )
@@ -141,8 +144,53 @@ class ReaderIco( Reader ):
     nAlphaSize = 0
     sAlpha = ""
     if nBpp < 32:
-      nAlphaSize = ((nWidth * nHeight) / nBpp) or 1
+
+      nAlphaLineSize = (nWidth / 8) or 1
+      ##! Lines are 4-byte aligned.
+      nAlphaLineSize += nAlphaLineSize % 4
+      nAlphaSize = nAlphaLineSize * nHeight
       sAlpha = oReader.readArray( nAlphaSize )
+
+      nTransparentColorIndex = None
+      ##  In case of 16 colors use violet as transparent color, if
+      ##  available.
+      for i in range( nColorsInPalette ):
+        r, g, b, a = struct.unpack( '!BBBB', sPalette[ i * 4 : i * 4 + 4 ] )
+        if 0xFF == r and 0 == g and 0xFF == b:
+          nTransparentColorIndex = i
+      ##  In case of 256 colors palette use color with index 255 as
+      ##  transparent and change it'c palette color to violet.
+      if 8 == nBpp:
+        sPalette = sPalette[ : -4 ] + struct.pack( '!BBBB', 0xFF, 0, 0xFF, 0 )
+        nTransparentColorIndex = 0xFF
+
+      lPixels = list( sPixels )
+      for i in range( nHeight ):
+        for j in range( nWidth ):
+          nOffset = i * nWidth + j
+
+          nOffsetInBytes = i * nAlphaLineSize + j / 8
+          nOffsetInBits = i * nAlphaLineSize * 8 + j
+          nByte = ord( sAlpha[ nOffsetInBytes ] )
+          if not 0 == (nByte & (1 << (7 - (nOffsetInBits % 8)))):
+            ##  For 4 bits per pixel mark transparent with violet color.
+            if 4 == nBpp and nTransparentColorIndex is not None:
+              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
+              nByte = ord( lPixels[ nOffsetInBytes ] )
+              nOffsetInBits = i * nLineSize * 8 + j * nBpp
+              ##  Offset inside byte.
+              nOffset = nOffsetInBits - nOffsetInBytes * 8
+              if 0 == nOffset:
+                nByte = (nTransparentColorIndex << 4) | (nByte & 0x0F)
+              if 4 == nOffset:
+                nByte = (nByte & 0xF0) | nTransparentColorIndex
+              lPixels[ nOffsetInBytes ] = chr( nByte )
+            ##  For 8 bits per pixel mark transparent with color in
+            ##  paleter with index 255:
+            if 8 == nBpp:
+              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
+              lPixels[ nOffsetInBytes ] = chr( 255 )
+      sPixels = ''.join( lPixels )
 
     arg.data_s = struct.pack( '<HIHHIIIIHHIIiiII',
       ##  .bmp Magic.
@@ -156,8 +204,8 @@ class ReaderIco( Reader ):
       ##  Offset from beginning of file to pixel data.
       HEADERS_SIZE + nColorsInPalette * 4,
       40,
-      ##! Remove "AND mask" with transparency info.
-      nWidth, nHeight / 2,
+      nWidth,
+      nHeight,
       1,
       nBpp,
       nCompression,
@@ -182,7 +230,6 @@ def open( fp, mode = 'r' ):
 
   for i in range( nImages ):
     oImage = oReader.readImage()
-    print( oImage )
     oIco.images_l.append( oImage )
 
   return oIco
