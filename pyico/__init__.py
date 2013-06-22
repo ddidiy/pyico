@@ -18,14 +18,12 @@ PROP_UNIT        = 22
 PROP_VECTORS     = 25
 
 
-class CImage( object ):
+class Image( object ):
 
 
   def __init__( self ):
-    self.size_g   = (0,0)
-    self.mode_s   = ""
-    self.props_l  = []
-    self.layers_l = []
+    ##  Number of images in .ico file.
+    self.images_n = 0
 
 
 class CProp( dict ):
@@ -58,7 +56,7 @@ class CReader( object ):
 
 
   def read( self, s_format ):
-    ABOUT = { '!': 0, 'B': 1, 'H': 2, 'I': 4, 'f': 4 }
+    ABOUT = { '!': 0, '<': 0, 'B': 1, 'H': 2, 'I': 4, 'f': 4 }
     nLen = reduce( lambda x, y: x + y, [ ABOUT[ x ] for x in s_format ] )
     sSplice = self.data_s[ self.offset_n: self.offset_n + nLen ]
     gItems = struct.unpack( s_format, sSplice )
@@ -81,7 +79,7 @@ class CReader( object ):
     self.offset_n = self.offsets_l.pop()
 
 
-class CReaderXcf( CReader ):
+class ReaderIco( CReader ):
 
 
   def readStr( self ):
@@ -215,20 +213,16 @@ class CReaderXcf( CReader ):
 def open( fp, mode = 'r' ):
   assert 'r' == mode
   with __builtin__.open( fp, mode ) as oFile:
-    oReader = CReaderXcf( oFile.read() )
-  oImg = CImage()
+    oReader = ReaderIco( oFile.read() )
+  oImg = Image()
 
   ##  Read header
-  sMagic = oReader.readArray( 9 )
-  assert sMagic.startswith( 'gimp xcf' )
-  sVer = oReader.readArray( 4 )
-  assert sVer in [ 'file', 'v001', 'v002' ]
-  assert 0 == oReader.read( '!B' )
-  oImg.size_g = oReader.read( '!II' )
-  assert oImg.size_g[ 0 ] > 0 and oImg.size_g[ 1 ] > 0
-  ABOUT_MODE = { 0: 'RGB', 1: 'L', 2: 'P' }
-  oImg.mode_s = ABOUT_MODE[ oReader.read( '!I' ) ]
+  assert 0 == oReader.read( '<H' )
+  assert 1 == oReader.read( '<H' )
+  oImg.images_n = oReader.read( '<H' )
+  assert oImg.images_n > 0
 
+  """
   ##  Read properties.
   while True:
     oProp = oReader.readProp()
@@ -243,6 +237,7 @@ def open( fp, mode = 'r' ):
     if 0 == nOffset:
       break
     oImg.layers_l.append( oReader.readLayer( nOffset ) )
+  """
 
   return oImg
 
