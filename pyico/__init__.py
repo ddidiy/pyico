@@ -18,6 +18,12 @@ class Ico( object ):
     self.images_l = []
 
 
+  ##  Evaluates to binary data corresponding to this icon. It can be used
+  ##  to write modified icon into file.
+  def data( self ):
+    pass
+
+
 class Image( object ):
 
 
@@ -68,6 +74,25 @@ class Reader( object ):
 
   def pop( self ):
     self.offset_n = self.offsets_l.pop()
+
+
+class Writer( object ):
+
+
+  def __init__( self ):
+    self.chunks_l = []
+
+
+  def write( self, s_format, * args ):
+    self._write( s_format = s_format, f_end = False, l_args = args )
+
+
+  def writeEnd( self, s_format, * args ):
+    self._write( s_format = s_format, f_end = True, l_args = args )
+
+
+  def _write( self, s_format, f_end, l_args ):
+    pass
 
 
 class ReaderIco( Reader ):
