@@ -10,6 +10,7 @@
 import pyico
 
 oImg = pyico.open( "test.ico" )
+print( oImg.images_l[ 0 ].png_f )
 
 """
 print( "size: {0} x {1}".format( * oImg.size_g ) )

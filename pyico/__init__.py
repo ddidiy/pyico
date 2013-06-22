@@ -26,6 +26,9 @@ class Image( object ):
     self.planes_n = 0
     self.bpp_n = 0
     self.data_s = 0
+    ##  if set to |True|, data is in compressed |png| format alongside
+    ##  with header.
+    self.png_f = False
 
 
   def __str__( self ):
@@ -89,12 +92,18 @@ class ReaderIco( CReader ):
     oImage.data_s = self.readArray( nData )
     self.pop()
 
+    ##  .ico don't have any means to distinguish BMP and PNG data, so
+    ##  PNG is detected by 8-byte signature.
+    PNG_MAGIC = '\x89\x50\x4E\x47\x0D\x0A\x1A\x0A'
+    if nData > 8 and oImage.data_s.startswith( PNG_MAGIC ):
+      oImage.png_f = True
+
     return oImage
 
 
 def open( fp, mode = 'r' ):
   assert 'r' == mode
-  with __builtin__.open( fp, mode ) as oFile:
+  with __builtin__.open( fp, mode + 'b' ) as oFile:
     oReader = ReaderIco( oFile.read() )
   oIco = Ico()
 
