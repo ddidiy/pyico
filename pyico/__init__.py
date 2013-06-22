@@ -9,41 +9,27 @@
 
 import __builtin__, struct
 
-PROP_END         = 0
-PROP_COMPRESSION = 17
-PROP_RESOLUTION  = 19
-PROP_TATTOO      = 20
-PROP_PARASITES   = 21
-PROP_UNIT        = 22
-PROP_VECTORS     = 25
+class Ico( object ):
+
+
+  def __init__( self ):
+    self.images_l = []
 
 
 class Image( object ):
 
 
   def __init__( self ):
-    ##  Number of images in .ico file.
-    self.images_n = 0
+    self.width_n = 0
+    self.height_n = 0
+    self.colors_n = 0
+    self.planes_n = 0
+    self.bpp_n = 0
+    self.data_s = 0
 
 
-class CProp( dict ):
-
-
-  def __init__( self ):
-    dict.__init__( self )
-    self.type_n = PROP_END
-    ##! Can be incorrect for known property types.
-    self.size_n = 0
-
-
-class CLayer( dict ):
-
-
-  def __init__( self ):
-    super( CLayer, self ).__init__()
-    self.size_g  = (0,0)
-    self.mode_s  = ""
-    self.alpha_f = False
+  def __str__( self ):
+    return "{width_n}x{height_n}x{bpp_n}".format( ** self.__dict__ )
 
 
 class CReader( object ):
@@ -70,174 +56,58 @@ class CReader( object ):
     return sSplice
 
 
-  def Push( self, n_newOffset ):
+  def push( self, n_newOffset ):
     self.offsets_l.append( self.offset_n )
     self.offset_n = n_newOffset
 
 
-  def Pop( self ):
+  def pop( self ):
     self.offset_n = self.offsets_l.pop()
 
 
 class ReaderIco( CReader ):
 
 
-  def readStr( self ):
-    nLen = self.read( '!I' )
-    assert nLen > 0
-    ##  Length includes terminating zero byte.
-    sData = self.readArray( nLen - 1 )
-    ##  Terminating zero byte.
-    self.read( '!B' )
-    return sData.decode( 'utf-8' )
+  def readImage( self ):
 
+    oImage = Image()
+    oImage.width_n = self.read( '<B' )
+    if 0 == oImage.width_n:
+      oImage.width_n = 256
+    oImage.height_n = self.read( '<B' )
+    if 0 == oImage.height_n:
+      oImage.height_n = 256
+    oImage.colors_n = self.read( '<B' )
+    assert 0 == self.read( '<B' )
+    oImage.planes_n = self.read( '<H' )
+    assert oImage.planes_n in [ 0, 1 ]
+    oImage.bpp_n = self.read( '<H' )
+    nData = self.read( '<I' )
+    nOffset = self.read( '<I' )
 
-  def readBool( self ):
-    return { 1: True, 0: False }[ self.read( '!I' ) ]
+    self.push( nOffset )
+    oImage.data_s = self.readArray( nData )
+    self.pop()
 
-
-  def readPropEnd( self, o_prop ):
-    assert 0 == o_prop.size_n
-    pass
-
-
-  def readPropCompression( self, o_prop ):
-    assert 1 == o_prop.size_n
-    o_prop[ 'COMPRESSION' ] = self.read( '!B' )
-
-
-  def readPropResolution( self, o_prop ):
-    assert 8 == o_prop.size_n
-    o_prop[ 'RES_X' ], o_prop[ 'RES_Y' ] = self.read( '!ff' )
-
-
-  def readPropTattoo( self, o_prop ):
-    assert 4 == o_prop.size_n
-    ##  Highest tattoo in image, used to generate new tattoos.
-    o_prop[ 'TATTOO' ] = self.read( '!I' )
-
-
-  def readPropParasites( self, o_prop ):
-    self.readArray( o_prop.size_n )
-
-
-  def readPropUnit( self, o_prop ):
-    assert 4 == o_prop.size_n
-    ##  Print resolution units.
-    ABOUT_UNIT = { 0: 'inch', 1: 'mm', 2: 'point', 3: 'pica' }
-    o_prop[ 'TATTOO' ] = ABOUT_UNIT[ self.read( '!I' ) ]
-
-
-  def readPropVectors( self, o_prop ):
-    o_prop[ 'VER' ] = self.read( '!I' )
-    assert 1 == o_prop[ 'VER' ]
-    o_prop[ 'ACTIVE_PATH_IDX' ] = self.read( '!I' )
-    nPaths = self.read( '!I' )
-    o_prop[ 'PATHS' ] = []
-    for i in range( nPaths ):
-      mPath = {}
-      mPath[ 'NAME' ]    = self.readStr()
-      mPath[ 'TATTOO' ]  = self.read( '!I' )
-      mPath[ 'VISIBLE' ] = self.readBool()
-      mPath[ 'LINKED' ]  = self.readBool()
-      mPath[ 'STROKES' ] = []
-      nParasites = self.read( '!I' )
-      nStrokes = self.read( '!I' )
-      for i in range( nParasites ):
-        oProp = CProp()
-        oProp.type_n = self.read( '!I' )
-        oProp.size_n = self.read( '!I' )
-        assert PROP_PARASITES == oProp.type_n
-        self.readPropParasites( oProp )
-      for i in range( nStrokes ):
-        mStroke = {}
-        ABOUT_TYPES = { 1: 'bezier' }
-        mStroke[ 'TYPE' ] = ABOUT_TYPES[ self.read( '!I' ) ]
-        mStroke[ 'CLOSED' ] = self.readBool()
-        mStroke[ 'POINTS' ] = []
-        nFloats = self.read( '!I' )
-        assert 2 <= nFloats <= 6
-        nPoints = self.read( '!I' )
-        for i in range( nPoints ):
-          mPoint = {}
-          ABOUT_TYPES = { 0: 'anchor', 1: 'control' }
-          mPoint[ 'TYPE' ]     = ABOUT_TYPES[ self.read( '!I' ) ]
-          mPoint[ 'X' ]        = self.read( '!f' )
-          mPoint[ 'Y' ]        = self.read( '!f' )
-          mPoint[ 'PRESSURE' ] = self.read( '!f' ) if nFloats >=3 else 1.0
-          mPoint[ 'XTILT' ]    = self.read( '!f' ) if nFloats >=4 else 0.5
-          mPoint[ 'YTILT' ]    = self.read( '!f' ) if nFloats >=5 else 0.5
-          mPoint[ 'WHEEL' ]    = self.read( '!f' ) if nFloats >=6 else 0.5
-          mStroke[ 'POINTS' ].append( mPoint )
-        mPath[ 'STROKES' ].append( mStroke )
-      o_prop[ 'PATHS' ].append( mPath )
-
-
-  def readProp( self ):
-    oProp = CProp()
-    oProp.type_n = self.read( '!I' )
-    oProp.size_n = self.read( '!I' )
-    ABOUT_READERS = {
-      PROP_END        : self.readPropEnd,
-      PROP_COMPRESSION: self.readPropCompression,
-      PROP_RESOLUTION : self.readPropResolution,
-      PROP_TATTOO     : self.readPropTattoo,
-      PROP_PARASITES  : self.readPropParasites,
-      PROP_UNIT       : self.readPropUnit,
-      PROP_VECTORS    : self.readPropVectors
-    }
-    if oProp.type_n in ABOUT_READERS:
-      ABOUT_READERS[ oProp.type_n ]( oProp )
-    else:
-      print( "Ignoring unknown property of type {0}".format( oProp.type_n ) )
-      self.readArray( oProp.size_n )
-    return oProp
-
-
-  def readLayer( self, n_offset ):
-    self.Push( n_offset )
-    oLayer = CLayer()
-    oLayer.size_g = self.read( '!II' )
-    ABOUT_MODES = {
-      0: ('RGB', False),
-      1: ('RGB', True),
-      2: ('L', False),
-      3: ('L', True),
-      4: ('P', False),
-      5: ('P', True) }
-    oLayer.mode_s, oLayer.alpha_f = ABOUT_MODES[ self.read( '!I' ) ]
-    self.Pop()
-    return oLayer
+    return oImage
 
 
 def open( fp, mode = 'r' ):
   assert 'r' == mode
   with __builtin__.open( fp, mode ) as oFile:
     oReader = ReaderIco( oFile.read() )
-  oImg = Image()
+  oIco = Ico()
 
   ##  Read header
   assert 0 == oReader.read( '<H' )
   assert 1 == oReader.read( '<H' )
-  oImg.images_n = oReader.read( '<H' )
-  assert oImg.images_n > 0
+  nImages = oReader.read( '<H' )
+  assert nImages > 0
 
-  """
-  ##  Read properties.
-  while True:
-    oProp = oReader.readProp()
-    ##  Last property will have type PROP_END and size 0.
-    if PROP_END == oProp.type_n:
-      break
-    oImg.props_l.append( oProp )
+  for i in range( nImages ):
+    oImage = oReader.readImage()
+    print( oImage )
+    oIco.images_l.append( oImage )
 
-  ##  Read layers.
-  while True:
-    nOffset = oReader.read( '!I' )
-    if 0 == nOffset:
-      break
-    oImg.layers_l.append( oReader.readLayer( nOffset ) )
-  """
-
-  return oImg
+  return oIco
 
