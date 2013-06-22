@@ -143,6 +143,11 @@ class ReaderIco( Reader ):
     sPixels = oReader.readArray( nImageSize )
     nAlphaSize = 0
     sAlpha = ""
+
+    ##  Since .bmp file don't have notion of transparency, replace some
+    ##  colors with violet to mark as transparent. It's not needed for
+    ##  |32| bit images since they already have alpha as |4|-th byte in
+    ##  each pixel.
     if nBpp < 32:
 
       nAlphaLineSize = (nWidth / 8) or 1
@@ -151,7 +156,6 @@ class ReaderIco( Reader ):
       nAlphaSize = nAlphaLineSize * nHeight
       sAlpha = oReader.readArray( nAlphaSize )
 
-      nTransparentColorIndex = None
       ##  In case of 16 colors use violet as transparent color, if
       ##  available.
       for i in range( nColorsInPalette ):
@@ -164,6 +168,7 @@ class ReaderIco( Reader ):
         sPalette = sPalette[ : -4 ] + struct.pack( '!BBBB', 0xFF, 0, 0xFF, 0 )
         nTransparentColorIndex = 0xFF
 
+      ##  Actual color replacement.
       lPixels = list( sPixels )
       for i in range( nHeight ):
         for j in range( nWidth ):
@@ -178,7 +183,7 @@ class ReaderIco( Reader ):
               nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
               nByte = ord( lPixels[ nOffsetInBytes ] )
               nOffsetInBits = i * nLineSize * 8 + j * nBpp
-              ##  Offset inside byte.
+              ##* Offset inside byte.
               nOffset = nOffsetInBits - nOffsetInBytes * 8
               if 0 == nOffset:
                 nByte = (nTransparentColorIndex << 4) | (nByte & 0x0F)
@@ -190,6 +195,11 @@ class ReaderIco( Reader ):
             if 8 == nBpp:
               nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
               lPixels[ nOffsetInBytes ] = chr( 255 )
+            if 24 == nBpp:
+              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
+              lPixels[ nOffsetInBytes + 0 ] = chr( 0xFF )
+              lPixels[ nOffsetInBytes + 1 ] = chr( 0 )
+              lPixels[ nOffsetInBytes + 2 ] = chr( 0xFF )
       sPixels = ''.join( lPixels )
 
     arg.data_s = struct.pack( '<HIHHIIIIHHIIiiII',
