@@ -85,6 +85,7 @@ class Bmp( object ):
     sData = ''
     sData += self._createFileHeader()
     sData += self._createPalette()
+    sData += self._createPixels()
     return sData
 
 
@@ -168,12 +169,12 @@ class Bmp( object ):
         if 8 == self._bpp_n:
           self._pixels_l[ i ][ j ] = nByte
         if self._bpp_n >= 24:
-          nRed = sPixels[ nOffsetInBytes + 0 ]
-          nGreen = sPixels[ nOffsetInBytes + 1 ]
-          nBlue = sPixels[ nOffsetInBytes + 2 ]
+          nRed = ord( sPixels[ nOffsetInBytes + 0 ] )
+          nGreen = ord( sPixels[ nOffsetInBytes + 1 ] )
+          nBlue = ord( sPixels[ nOffsetInBytes + 2 ] )
           nAlpha = 0
           if 32 == self._bpp_n:
-            nAlpha = sPixels[ nOffsetInBytes + 3 ]
+            nAlpha = ord( sPixels[ nOffsetInBytes + 3 ] )
           self._pixels_l[ i ][ j ] = (nRed, nGreen, nBlue, nAlpha)
 
 
@@ -222,5 +223,31 @@ class Bmp( object ):
     sData = ''
     for gColor in self._palette_l:
       sData += struct.pack( '!BBBB', * (list( gColor ) + [ 0 ]) )
+    return sData
+
+
+  def _createPixels( self ):
+    sData = ''
+    for nY in range( self._height_n ):
+      lAccumulated = []
+      for nX in range( self._height_n):
+        if self._bpp_n <= 8:
+          lAccumulated.append( self._pixels_l[ nY ][ nX ] )
+          ##  Collected one or more bytes:
+          if ((len( lAccumulated ) * self._bpp_n) / 8) > 0:
+            nByte = 0
+            for i, nColor in enumerate( lAccumulated ):
+              nByte |= (nColor << (self._bpp_n * i))
+            lAccumulated = []
+            sData += chr( nByte )
+        elif 24 == self._bpp_n:
+          gColor = self._pixels_l[ nY ][ nX ]
+          sData += struct.pack( '!BBB', * list( gColor )[ : 3 ] )
+        elif 32 == self._bpp_n:
+          gColor = self._pixels_l[ nY ][ nX ]
+          sData += struct.pack( '!BBBB', * gColor )
+      nFill = self._lineSize_n - ((self._width_n * self._bpp_n) / 8 or 1)
+      sData += '\x00' * nFill
+    assert len( sData ) == self._lineSize_n * self._height_n
     return sData
 
