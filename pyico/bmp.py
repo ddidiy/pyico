@@ -134,18 +134,19 @@ class Bmp( object ):
     nAlphaLineSize = (self._width_n / 8) or 1
     ##! Lines are 4-byte aligned.
     nAlphaLineSize = nAlphaLineSize  % 4
-    nAlphaSize = nAlphaLineSize * self._height_n
-
-    sAlpha = o_reader.readArray( nAlphaSize )
+    sAlpha = o_reader.readArray( nAlphaLineSize * self._height_n )
 
     nSide = self._width_n
-    self._alpha_l = [ [ 1 for x in range( nSide ) ] for y in range( nSide ) ]
+    self._alpha_l = [ [ 0 for x in range( nSide ) ] for y in range( nSide ) ]
     for i in range( nSide ):
       for j in range( nSide ):
         nOffsetInBytes = i * nAlphaLineSize + j / 8
         nOffsetInBits = i * nAlphaLineSize * 8 + j
         nByte = ord( sAlpha[ nOffsetInBytes ] )
-        self._alpha_l[ i ][ j ] = (nByte & (1 << (7 - (nOffsetInBits % 8))))
+        if not 0 == (nByte & (1 << (7 - (nOffsetInBits % 8)))):
+          self._alpha_l[ i ][ j ] = 1
+        else:
+          self._alpha_l[ i ][ j ] = 0
 
 
   def _readPixels( self, o_reader ):
