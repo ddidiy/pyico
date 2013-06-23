@@ -84,6 +84,7 @@ class Bmp( object ):
 
     sData = ''
     sData += self._createFileHeader()
+    sData += self._createPalette()
     return sData
 
 
@@ -216,4 +217,10 @@ class Bmp( object ):
       ##  Important colors.
       self._colors_n )
 
+
+  def _createPalette( self ):
+    sData = ''
+    for gColor in self._palette_l:
+      sData += struct.pack( '!BBBB', * (list( gColor ) + [ 0 ]) )
+    return sData
 
