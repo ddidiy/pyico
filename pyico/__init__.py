@@ -44,7 +44,13 @@ class Ico( object ):
     assert nHeight <= 256
     if 256 == nHeight:
       nHeight = 0
-    self.writer_o.write( '<B', nWidth )
+    ##! Bitmaps in ICO contains 'AND mask', it's data is written after
+    ##  pixel data. To indicate presence of this mask, image height is
+    ##  doubled.
+    ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
+    ##  it for optimization reasons, bacward compatibility and tolerance to
+    ##  programs that can't handle it's absence.
+    self.writer_o.write( '<B', nWidth * 2 )
 
     self.writer_o.write( '<B', arg.colors_n )
     self.writer_o.write( '<B', 0 )
@@ -54,7 +60,15 @@ class Ico( object ):
     self.writer_o.writeOffset( '<I', arg.index_n )
     self.writer_o.writeSize( '<I', arg.index_n )
 
+    ##  Add alpha mask.
+    self._encodeBmp( arg )
+
     self.writer_o.writeArrayEnd( arg.data_s, n_id = arg.index_n )
+
+
+  ##  Reverse to |ReaderIco._decodeBmp|.
+  def _encodeBmp( self, arg ):
+    pass
 
 
 class Image( object ):
