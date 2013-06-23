@@ -81,30 +81,10 @@ class Bmp( object ):
   ##  Evaluates to binary representation of loaded image that can be
   ##  saved as .BMP file.
   def toBmp( self ):
-    """
-    data_s = struct.pack( '<HIHHIIIIHHIIiiII',
-      ##  .bmp Magic.
-      struct.unpack( '<H', 'BM' )[ 0 ],
-      ##  File size.
-      HEADERS_SIZE + nColorsInPalette * 4 + nImageSize,
-      ##  Reserved.
-      0,
-      ##  Reserved.
-      0,
-      ##  Offset from beginning of file to pixel data.
-      HEADERS_SIZE + nColorsInPalette * 4,
-      40,
-      nWidth,
-      nHeight,
-      1,
-      self._bpp_n,
-      nCompression,
-      nImageSize,
-      nResolutionCx,
-      nResolutionCy,
-      nColorsInPalette,
-      nColorsInPaletteImportant ) + sPalette + sPixels
-    """
+
+    sData = ''
+    sData += self._createFileHeader()
+    return sData
 
 
   def _readBitmapHeader( self, o_reader ):
@@ -208,4 +188,32 @@ class Bmp( object ):
     if 8 == self._bpp_n:
       self._palette_l[ 0xFF ] = (0xFF, 0, 0xFF)
       return 0xFF
+
+
+  def _createFileHeader( self ):
+    return struct.pack( '<HIHHIIIIHHIIiiII',
+      ##  .bmp Magic.
+      struct.unpack( '<H', 'BM' )[ 0 ],
+      ##  File size.
+      HEADERS_SIZE + self._colors_n * 4 + self._lineSize_n * self._height_n,
+      ##  Reserved.
+      0,
+      ##  Reserved.
+      0,
+      ##  Offset from beginning of file to pixel data.
+      HEADERS_SIZE + self._colors_n * 4,
+      BITMAPINFOHEADER_SIZE,
+      self._width_n,
+      self._height_n,
+      1,
+      self._bpp_n,
+      ##  Uncompressed.
+      0,
+      self._lineSize_n * self._height_n,
+      self._resCx_n,
+      self._resCy_n,
+      self._colors_n,
+      ##  Important colors.
+      self._colors_n )
+
 
