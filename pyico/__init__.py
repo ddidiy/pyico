@@ -16,12 +16,39 @@ class Ico( object ):
 
   def __init__( self ):
     self.images_l = []
+    self.writer_o = Writer()
 
 
   ##  Evaluates to binary data corresponding to this icon. It can be used
   ##  to write modified icon into file.
   def data( self ):
-    pass
+    self.writer_o.clear()
+    self.writer_o.write( '<H', 0 )
+    self.writer_o.write( '<H', 1 )
+    self.writer_o.write( '<H', len( self.images_l ) )
+    for oImage in self.images_l:
+      self._addDataForImage( oImage )
+    return self.writer_o.data()
+
+
+  def _addDataForImage( self, arg ):
+
+    nWidth = arg.width_n
+    assert nWidth <= 256
+    if 256 == nWidth:
+      nWidth = 0
+    self.writer_o.write( '<B', nWidth )
+
+    nHeight = arg.width_n
+    assert nHeight <= 256
+    if 256 == nHeight:
+      nHeight = 0
+    self.writer_o.write( '<B', nWidth )
+
+    self.writer_o.write( '<B', arg.colors_n )
+    self.writer_o.write( '<B', 0 )
+    self.writer_o.write( '<H', arg.planes_n )
+    self.writer_o.write( '<H', arg.bpp_n )
 
 
 class Image( object ):
@@ -83,16 +110,34 @@ class Writer( object ):
     self.chunks_l = []
 
 
+  def data( self ):
+    sData = ""
+    for oChunk in self.chunks_l:
+      if not oChunk[ 'end_f' ]:
+        sData += oChunk[ 'data_s' ]
+    for oChunk in self.chunks_l:
+      if oChunk[ 'end_f' ]:
+        sData += oChunk[ 'data_s' ]
+    return sData
+
+
+  def clear( self ):
+    self.chunks_l = []
+
+
   def write( self, s_format, * args ):
-    self._write( s_format = s_format, f_end = False, l_args = args )
+    self._write( s_format = s_format, f_end = False, args = args )
 
 
   def writeEnd( self, s_format, * args ):
-    self._write( s_format = s_format, f_end = True, l_args = args )
+    self._write( s_format = s_format, f_end = True, args = args )
 
 
-  def _write( self, s_format, f_end, l_args ):
-    pass
+  def _write( self, s_format, f_end, args ):
+    self.chunks_l.append({
+      'data_s': struct.pack( s_format, * args ),
+      'end_f': f_end
+    })
 
 
 class ReaderIco( Reader ):

@@ -10,7 +10,8 @@
 import pyico
 
 oImg = pyico.open( "test.ico" )
-open( "test.bmp", 'wb' ).write( oImg.images_l[ 3 ].data_s )
+open( "test_out.ico", 'wb' ).write( oImg.data() )
+# open( "test.bmp", 'wb' ).write( oImg.images_l[ 3 ].data_s )
 
 """
 print( "size: {0} x {1}".format( * oImg.size_g ) )
