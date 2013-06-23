@@ -237,7 +237,7 @@ class Bmp( object ):
           if ((len( lAccumulated ) * self._bpp_n) / 8) > 0:
             nByte = 0
             for i, nColor in enumerate( lAccumulated ):
-              nByte |= (nColor << (self._bpp_n * i))
+              nByte |= (nColor << (8 - self._bpp_n - self._bpp_n * i))
             lAccumulated = []
             sData += chr( nByte )
         elif 24 == self._bpp_n:
