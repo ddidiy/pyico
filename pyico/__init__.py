@@ -11,6 +11,9 @@ import __builtin__, struct
 import PIL.BmpImagePlugin
 import StringIO
 
+import binary
+import bmp
+
 class Ico( object ):
 
 
@@ -72,7 +75,7 @@ class Ico( object ):
     BITMAPINFOHEADER_SIZE = 40
     HEADERS_SIZE = BITMAPFILEHEADER_SIZE + BITMAPINFOHEADER_SIZE
 
-    oReader = Reader( arg.data_s )
+    oReader = binary.Reader( arg.data_s )
     oReader.readArray( BITMAPFILEHEADER_SIZE )
 
     assert BITMAPINFOHEADER_SIZE == oReader.read( '<I' )
@@ -195,39 +198,6 @@ class Image( object ):
     return "{width_n}x{height_n}x{bpp_n}".format( ** self.__dict__ )
 
 
-class Reader( object ):
-
-
-  def __init__( self, s_data ):
-    self.data_s = s_data
-    self.offset_n = 0
-    self.offsets_l = []
-
-
-  def read( self, s_format ):
-    ABOUT = { '!': 0, '<': 0, 'B': 1, 'H': 2, 'I': 4, 'i': 4, 'f': 4 }
-    nLen = reduce( lambda x, y: x + y, [ ABOUT[ x ] for x in s_format ] )
-    sSplice = self.data_s[ self.offset_n: self.offset_n + nLen ]
-    gItems = struct.unpack( s_format, sSplice )
-    self.offset_n += nLen
-    return gItems if len( gItems ) > 1 else gItems[ 0 ]
-
-
-  def readArray( self, n_len ):
-    sSplice = self.data_s[ self.offset_n: self.offset_n + n_len ]
-    self.offset_n += n_len
-    return sSplice
-
-
-  def push( self, n_newOffset ):
-    self.offsets_l.append( self.offset_n )
-    self.offset_n = n_newOffset
-
-
-  def pop( self ):
-    self.offset_n = self.offsets_l.pop()
-
-
 class Writer( object ):
 
 
@@ -340,7 +310,7 @@ class Writer( object ):
       })
 
 
-class ReaderIco( Reader ):
+class ReaderIco( binary.Reader ):
 
 
   def readImage( self ):
@@ -371,132 +341,14 @@ class ReaderIco( Reader ):
       oImage.png_f = True
     else:
       oImage.png_f = False
-      self._decodeBmp( oImage )
+      ##  Read .ico version of BMP file (with doubled height,
+      ##  'AND' transparency image etc) and convert to a BMP file data so
+      ##  it can be writen back to valid .bmp file.
+      oBmp = bmp.Bmp()
+      oBmp.fromIco( oImage.data_s )
+      oImage.data_s = oBmp.toBmp()
 
     return oImage
-
-
-  ##  Reads .ico version of BMP file from arg.data_s (with doubled height,
-  ##  'AND' transparency image etc) and writes back a BMP file data so
-  ##  it can be writen back to valid .bmp file.
-  def _decodeBmp( self, arg ):
-
-    BITMAPFILEHEADER_SIZE = 14
-    BITMAPINFOHEADER_SIZE = 40
-    HEADERS_SIZE = BITMAPFILEHEADER_SIZE + BITMAPINFOHEADER_SIZE
-
-    oReader = Reader( arg.data_s )
-    assert BITMAPINFOHEADER_SIZE == oReader.read( '<I' )
-    nWidth, nHeight = oReader.read( '<II' )
-    ##! Height counts alpha channel mask as a separate image.
-    nHeight = nWidth
-    ##  Number of color planes.
-    assert 1 == oReader.read( '<H' )
-    nBpp = oReader.read( '<H' )
-    assert nBpp in [ 1, 4, 8, 16, 24, 32 ]
-    nCompression = oReader.read( '<I' )
-    nImageSize = oReader.read( '<I' )
-    ##  Bytes in horizontal line in image.
-    nLineSize = ((nWidth * nBpp) / 8) or 1
-    ##! Lines are 4-byte aligned.
-    nLineSize += nLineSize % 4
-    ##  Can be 0 for uncompressed bitmaps.
-    if 0 == nImageSize:
-      nImageSize = nLineSize * nHeight
-    nResolutionCx, nResolutionCy = oReader.read( '<ii' )
-    nColorsInPalette = oReader.read( '<I' )
-    if 0 == nColorsInPalette and nBpp <= 8:
-      nColorsInPalette = pow( 2, nBpp )
-    nColorsInPaletteImportant = oReader.read( '<I' )
-
-    sPalette = oReader.readArray( nColorsInPalette * 4 )
-    sPixels = oReader.readArray( nImageSize )
-    nAlphaSize = 0
-    sAlpha = ""
-
-    ##  Since .bmp file don't have notion of transparency, replace some
-    ##  colors with violet to mark as transparent. It's not needed for
-    ##  |32| bit images since they already have alpha as |4|-th byte in
-    ##  each pixel.
-    if nBpp < 32:
-
-      ##  Bytes in horizontal line in alpha mask.
-      nAlphaLineSize = (nWidth / 8) or 1
-      ##! Lines are 4-byte aligned.
-      nAlphaLineSize += nAlphaLineSize % 4
-      nAlphaSize = nAlphaLineSize * nHeight
-      sAlpha = oReader.readArray( nAlphaSize )
-
-      ##  In case of 16 colors use violet as transparent color, if
-      ##  available.
-      nTransparentColorIndex = None
-      for i in range( nColorsInPalette ):
-        r, g, b, a = struct.unpack( '!BBBB', sPalette[ i * 4 : i * 4 + 4 ] )
-        if 0xFF == r and 0 == g and 0xFF == b:
-          nTransparentColorIndex = i
-      ##  In case of 256 colors palette use color with index 255 as
-      ##  transparent and change it's palette color to violet.
-      if 8 == nBpp:
-        sPalette = sPalette[ : -4 ] + struct.pack( '!BBBB', 0xFF, 0, 0xFF, 0 )
-        nTransparentColorIndex = 0xFF
-
-      ##  Actual color replacement.
-      lPixels = list( sPixels )
-      for i in range( nHeight ):
-        for j in range( nWidth ):
-          nOffset = i * nWidth + j
-
-          nOffsetInBytes = i * nAlphaLineSize + j / 8
-          nOffsetInBits = i * nAlphaLineSize * 8 + j
-          nByte = ord( sAlpha[ nOffsetInBytes ] )
-          if not 0 == (nByte & (1 << (7 - (nOffsetInBits % 8)))):
-            ##  For 4 bits per pixel mark transparent with violet color.
-            if 4 == nBpp:
-              assert nTransparentColorIndex is not None
-              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
-              nByte = ord( lPixels[ nOffsetInBytes ] )
-              nOffsetInBits = i * nLineSize * 8 + j * nBpp
-              ##* Offset inside byte.
-              nOffset = nOffsetInBits - nOffsetInBytes * 8
-              if 0 == nOffset:
-                nByte = (nTransparentColorIndex << 4) | (nByte & 0x0F)
-              if 4 == nOffset:
-                nByte = (nByte & 0xF0) | nTransparentColorIndex
-              lPixels[ nOffsetInBytes ] = chr( nByte )
-            ##  For 8 bits per pixel mark transparent with color in
-            ##  paleter with index 255:
-            if 8 == nBpp:
-              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
-              lPixels[ nOffsetInBytes ] = chr( 255 )
-            if 24 == nBpp:
-              nOffsetInBytes = i * nLineSize + (j * nBpp) / 8
-              lPixels[ nOffsetInBytes + 0 ] = chr( 0xFF )
-              lPixels[ nOffsetInBytes + 1 ] = chr( 0 )
-              lPixels[ nOffsetInBytes + 2 ] = chr( 0xFF )
-      sPixels = ''.join( lPixels )
-
-    arg.data_s = struct.pack( '<HIHHIIIIHHIIiiII',
-      ##  .bmp Magic.
-      struct.unpack( '<H', 'BM' )[ 0 ],
-      ##  File size.
-      HEADERS_SIZE + nColorsInPalette * 4 + nImageSize,
-      ##  Reserved.
-      0,
-      ##  Reserved.
-      0,
-      ##  Offset from beginning of file to pixel data.
-      HEADERS_SIZE + nColorsInPalette * 4,
-      40,
-      nWidth,
-      nHeight,
-      1,
-      nBpp,
-      nCompression,
-      nImageSize,
-      nResolutionCx,
-      nResolutionCy,
-      nColorsInPalette,
-      nColorsInPaletteImportant ) + sPalette + sPixels
 
 
 def open( fp, mode = 'r' ):
