@@ -126,11 +126,32 @@ class Writer( object ):
     self.chunks_l = [ o for o in self.chunks_l if not o[ 'end_f' ] ] + \
       [ o for o in self.chunks_l if o[ 'end_f' ] ]
 
-    for oChunk in self.chunks_l:
-      if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
-        pass
+    ##  Calculate sizes and offsets of all data, so items marked as
+    ##  'size' and 'offset' can be assigned correct values.
+    nOffset = 0
+    for mChunk in self.chunks_l:
+      if mChunk[ 'type_s' ] in [ 'offset', 'size' ]:
+        mChunk[ 'size_n' ] = len( struct.pack( mChunk[ 'format_s' ], 0 ) )
       else:
-        sData += oChunk[ 'data_s' ]
+        mChunk[ 'size_n' ] = len( mChunk[ 'data_s' ] )
+      mChunk[ 'offset_n' ] = nOffset
+      nOffset += mChunk[ 'size_n' ]
+
+
+    for mChunk in self.chunks_l:
+      if mChunk[ 'type_s' ] in [ 'offset', 'size' ]:
+        ##  Find chunk whose offset or size must be written.
+        nId = mChunk[ 'target_n' ]
+        lChunks = [ o for o in self.chunks_l if o[ 'id_n' ] == nId ]
+        ##  Id not found or not unique?
+        assert 1 == len( lChunks )
+        if 'offset' == mChunk[ 'type_s' ]:
+          nVal = lChunks[ 0 ][ 'offset_n' ]
+        if 'size' == mChunk[ 'type_s' ]:
+          nVal = lChunks[ 0 ][ 'size_n' ]
+        sData += struct.pack( mChunk[ 'format_s' ], nVal )
+      else:
+        sData += mChunk[ 'data_s' ]
 
     return sData
 
@@ -167,8 +188,9 @@ class Writer( object ):
     self.chunks_l.append({
       'type_s': 'offset',
       'format_s': s_format,
-      'offsetId_n': n_offsetId,
+      'target_n': n_offsetId,
       'end_f': False,
+      'id_n': None,
     })
 
 
@@ -176,8 +198,9 @@ class Writer( object ):
     self.chunks_l.append({
       'type_s': 'size',
       'format_s': s_format,
-      'sizeId_n': n_sizeId,
+      'target_n': n_sizeId,
       'end_f': False,
+      'id_n': None,
     })
 
 
