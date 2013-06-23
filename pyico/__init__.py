@@ -121,18 +121,17 @@ class Writer( object ):
 
   def data( self ):
     sData = ""
+
+    ##  Data that has 'end' flag must be written after data without it.
+    self.chunks_l = [ o for o in self.chunks_l if not o[ 'end_f' ] ] + \
+      [ o for o in self.chunks_l if o[ 'end_f' ] ]
+
     for oChunk in self.chunks_l:
-      if not oChunk[ 'end_f' ]:
-        if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
-          pass
-        else:
-          sData += oChunk[ 'data_s' ]
-    for oChunk in self.chunks_l:
-      if oChunk[ 'end_f' ]:
-        if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
-          pass
-        else:
-          sData += oChunk[ 'data_s' ]
+      if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
+        pass
+      else:
+        sData += oChunk[ 'data_s' ]
+
     return sData
 
 
