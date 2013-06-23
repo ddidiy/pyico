@@ -26,7 +26,8 @@ class Ico( object ):
     self.writer_o.write( '<H', 0 )
     self.writer_o.write( '<H', 1 )
     self.writer_o.write( '<H', len( self.images_l ) )
-    for oImage in self.images_l:
+    for i, oImage in enumerate( self.images_l ):
+      oImage.index_n = i
       self._addDataForImage( oImage )
     return self.writer_o.data()
 
@@ -50,6 +51,11 @@ class Ico( object ):
     self.writer_o.write( '<H', arg.planes_n )
     self.writer_o.write( '<H', arg.bpp_n )
 
+    self.writer_o.writeOffset( '<I', arg.index_n )
+    self.writer_o.writeSize( '<I', arg.index_n )
+
+    self.writer_o.writeArrayEnd( arg.data_s, n_id = arg.index_n )
+
 
 class Image( object ):
 
@@ -64,6 +70,9 @@ class Image( object ):
     ##  if set to |True|, data is in compressed |png| format alongside
     ##  with header.
     self.png_f = False
+    ##  0-based index of this image inside .ico. Used by writer to
+    ##  distinguish images in order to correctly write offset/sizes.
+    self.index_n = None
 
 
   def __str__( self ):
@@ -114,10 +123,16 @@ class Writer( object ):
     sData = ""
     for oChunk in self.chunks_l:
       if not oChunk[ 'end_f' ]:
-        sData += oChunk[ 'data_s' ]
+        if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
+          pass
+        else:
+          sData += oChunk[ 'data_s' ]
     for oChunk in self.chunks_l:
       if oChunk[ 'end_f' ]:
-        sData += oChunk[ 'data_s' ]
+        if oChunk[ 'type_s' ] in [ 'offset', 'size' ]:
+          pass
+        else:
+          sData += oChunk[ 'data_s' ]
     return sData
 
 
@@ -126,18 +141,65 @@ class Writer( object ):
 
 
   def write( self, s_format, * args ):
-    self._write( s_format = s_format, f_end = False, args = args )
+    self._write(
+      s_format = s_format,
+      f_end = False,
+      n_id = None,
+      args = args )
 
 
   def writeEnd( self, s_format, * args ):
-    self._write( s_format = s_format, f_end = True, args = args )
+    self._write(
+      s_format = s_format,
+      f_end = True,
+      n_id = None,
+      args = args )
 
 
-  def _write( self, s_format, f_end, args ):
+  def writeArrayEnd( self, s_data, n_id = None ):
+    self._write(
+      s_format = None,
+      f_end = True,
+      n_id = n_id,
+      args = [ s_data ] )
+
+
+  def writeOffset( self, s_format, n_offsetId ):
     self.chunks_l.append({
-      'data_s': struct.pack( s_format, * args ),
-      'end_f': f_end
+      'type_s': 'offset',
+      'format_s': s_format,
+      'offsetId_n': n_offsetId,
+      'end_f': False,
     })
+
+
+  def writeSize( self, s_format, n_sizeId ):
+    self.chunks_l.append({
+      'type_s': 'size',
+      'format_s': s_format,
+      'sizeId_n': n_sizeId,
+      'end_f': False,
+    })
+
+
+  def _write( self, s_format, f_end, n_id, args ):
+    ##  Write some integers in specified binary format?
+    if s_format:
+      self.chunks_l.append({
+        'type_s': 'data',
+        'data_s': struct.pack( s_format, * args ),
+        'end_f': f_end,
+        'id_n': n_id,
+      })
+    ##  Write array?
+    else:
+      assert 1 == len( args )
+      self.chunks_l.append({
+        'type_s': 'array',
+        'data_s': args[ 0 ],
+        'end_f': f_end,
+        'id_n': n_id,
+      })
 
 
 class ReaderIco( Reader ):
