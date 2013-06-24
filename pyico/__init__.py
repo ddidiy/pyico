@@ -36,10 +36,19 @@ class Ico( object ):
     return self._writer_o.data()
 
 
-  ##  Adds new image from uncompressed .bmp file content.
-  def addFromBmp( self, s_data ):
+  ##x Adds new image from uncompressed .bmp file content.
+  def addFromBmp( self,
+    ##i Image data as loaded from |.bmp| file.
+    s_data,
+    ##i If specified, image's 'bits per pixel' value will be converted
+    ##  to specified. Used if image is programmatically generated (for
+    ##  expample, via PIL) and generator can't produce required bits per
+    ##  pixel for .bmp format (for example, PIL can't create 4 bits per
+    ##  pixel BMP).
+    n_bpp = None ):
+
     oBmp = bmp.Bmp()
-    oBmp.fromBmp( s_data )
+    oBmp.fromBmp( s_data, n_bpp )
     oImage = Image()
     oImage.initFromBmp( oBmp )
     oImage.data_s = oBmp.toBmp()

@@ -87,7 +87,7 @@ class Bmp( object ):
 
   ##x Decodes BMP information from uncompressed .BMP file and stores it in
   ##  internal representation.
-  def fromBmp( self, s_data ):
+  def fromBmp( self, s_data, n_bpp = None ):
 
     oReader = binary.Reader( s_data )
     ##  Skip BITMAPFILEHEADER
@@ -96,6 +96,16 @@ class Bmp( object ):
     self._readBitmapHeader( oReader )
     self._readPalette( oReader )
     self._readPixels( oReader )
+    ##  Override bits per pixels value if required (see caller for details).
+    if n_bpp is not None and n_bpp < self._bpp_n:
+      assert n_bpp <= 8
+      self._bpp_n = n_bpp
+      self._colors_n = pow( 2, n_bpp )
+      self._lineSize_n = self._lineSize( self._width_n, self._bpp_n )
+      self._palette_l = self._palette_l[ : pow( 2, n_bpp ) ]
+      for i in range( self._height_n ):
+        for j in range( self._width_n ):
+          assert self._pixels_l[ i ][ j ] < pow( 2, n_bpp )
 
 
   ##  Evaluates to binary representation of loaded image that can be stored
@@ -161,10 +171,7 @@ class Bmp( object ):
     assert 0 == nCompression
 
     nImageSize = o_reader.read( '<I' )
-    ##  Bytes in horizontal line in image.
-    self._lineSize_n = ((self._width_n * self._bpp_n) / 8) or 1
-    ##! Lines are 4-byte aligned.
-    self._lineSize_n += self._padding( self._lineSize_n, 4 )
+    self._lineSize_n = self._lineSize( self._width_n, self._bpp_n )
     ##  Can be 0 for uncompressed bitmaps.
     assert 0 == nImageSize or nImageSize >= self._lineSize_n * self._height_n
 
@@ -326,8 +333,8 @@ class Bmp( object ):
         elif 32 == self._bpp_n:
           gColor = self._pixels_l[ nY ][ nX ]
           sData += struct.pack( '!BBBB', * gColor )
-      nLineWidth = ((self._width_n * self._bpp_n) / 8) or 1
-      sData += '\x00' * self._padding( nLineWidth, 4 )
+      nLineSize = ((self._width_n * self._bpp_n) / 8) or 1
+      sData += '\x00' * self._padding( nLineSize, 4 )
     assert len( sData ) == self._lineSize_n * self._height_n
     return sData
 
@@ -357,4 +364,12 @@ class Bmp( object ):
     if nPadding == n_multiple:
       nPadding = 0
     return nPadding
+
+
+  def _lineSize( self, n_width, n_bpp ):
+    ##  Bytes in horizontal line in image.
+    nLineSize = ((n_width * n_bpp) / 8) or 1
+    ##! Lines are 4-byte aligned.
+    nLineSize += self._padding( nLineSize, 4 )
+    return nLineSize
 
