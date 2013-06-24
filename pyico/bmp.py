@@ -355,7 +355,8 @@ class Bmp( object ):
         if 8 == len( lAccumulated ):
           sData += accumulatedToData()
           lAccumulated = []
-      sData += accumulatedToData()
+      if lAccumulated:
+        sData += accumulatedToData()
       nPadding = self._padding( self._width_n, n_bpp = 1, n_align = 4 )
       sData += '\x00' * nPadding
     return sData
