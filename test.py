@@ -7,6 +7,7 @@
 
 # Test.
 
+import os
 import pyico
 
 oIco = pyico.open( "test.ico" )

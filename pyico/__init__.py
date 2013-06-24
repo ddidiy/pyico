@@ -42,6 +42,7 @@ class Ico( object ):
     oBmp.fromBmp( s_data )
     oImage = Image()
     oImage.initFromBmp( oBmp )
+    oImage.data_s = oBmp.toBmp()
     self.images_l.appen( oImage )
 
 
@@ -69,7 +70,6 @@ class Image( object ):
     self.colors_n = o_bmp.colors()
     self.planes_n = 1
     self.bpp_n = o_bmp.bpp()
-    self.data_s = o_bmp.toIco()
 
 
   def __str__( self ):
@@ -118,6 +118,7 @@ class ReaderIco( binary.Reader ):
       ##! Otherwrite image header data from |BMP| file structure, since
       ##  it can be corrpupted: for example, |bpp| value can be 0.
       oImage.initFromBmp( oBmp )
+      oImage.data_s = oBmp.toBmp()
 
     return oImage
 
@@ -131,6 +132,7 @@ class WriterIco( binary.Writer ):
     oBmp.fromBmp( o_image.data_s )
     ##  User can assign new bitmap, so reload image parameters from it.
     o_image.initFromBmp( oBmp )
+    o_image.data_s = oBmp.toIco()
 
     nWidth = o_image.width_n
     assert nWidth <= 256
