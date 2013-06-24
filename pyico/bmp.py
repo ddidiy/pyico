@@ -67,7 +67,7 @@ class Bmp( object ):
     ##  each pixel.
     ##! 32-bit .BMP has alpha channel written into every 4-th byte. Windows
     ##  will not be able to display it, but programs like GIMP will.
-    if self._bpp_n < 32:
+    if self._bpp_n < 24:
 
       self._readAlpha( oReader )
       if self._bpp_n <= 8:
