@@ -343,7 +343,7 @@ class Bmp( object ):
     sData = ''
     for nY in range( self._height_n ):
       lAccumulated = []
-      for nX in range( self._height_n):
+      for nX in range( self._width_n):
         lAccumulated.append( self._alpha_l[ nY ][ nX ] )
         ##  Collected one byte?
         if 8 == len( lAccumulated ):
