@@ -165,7 +165,7 @@ class Bmp( object ):
     ##! Lines are 4-byte aligned.
     self._lineSize_n += self._lineSize_n % 4
     ##  Can be 0 for uncompressed bitmaps.
-    assert 0 == nImageSize or self._lineSize_n * self._height_n == nImageSize
+    assert 0 == nImageSize or nImageSize >= self._lineSize_n * self._height_n
 
     self._resCx_n, self._resCy_n = o_reader.read( '<ii' )
     self._colors_n = o_reader.read( '<I' )
