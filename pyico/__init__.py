@@ -63,12 +63,12 @@ class Image( object ):
 
 
   def initFromBmp( self, o_bmp ):
-    oImage.width_n = o_bmp.width()
-    oImage.height_n = o_bmp.height()
-    oImage.colors_n = o_bmp.colors()
-    oImage.planes_n = 1
-    oImage.bpp_n = o_bmp.bpp()
-    oImage.data_s = o_bmp.toIco()
+    self.width_n = o_bmp.width()
+    self.height_n = o_bmp.height()
+    self.colors_n = o_bmp.colors()
+    self.planes_n = 1
+    self.bpp_n = o_bmp.bpp()
+    self.data_s = o_bmp.toIco()
 
 
   def __str__( self ):
@@ -95,6 +95,7 @@ class ReaderIco( binary.Reader ):
     oImage.planes_n = self.read( '<H' )
     assert oImage.planes_n in [ 0, 1 ]
     oImage.bpp_n = self.read( '<H' )
+    print( oImage.width_n, oImage.height_n, oImage.bpp_n )
     nData = self.read( '<I' )
     nOffset = self.read( '<I' )
 
@@ -114,7 +115,9 @@ class ReaderIco( binary.Reader ):
       ##  it can be writen back to valid .bmp file.
       oBmp = bmp.Bmp()
       oBmp.fromIco( oImage.data_s )
-      oImage.data_s = oBmp.toBmp()
+      ##! Otherwrite image header data from |BMP| file structure, since
+      ##  it can be corrpupted: for example, |bpp| value can be 0.
+      oImage.initFromBmp( oBmp )
 
     return oImage
 
