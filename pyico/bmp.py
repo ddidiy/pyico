@@ -221,7 +221,7 @@ class Bmp( object ):
     ##  Bytes in horizontal line in alpha mask.
     nAlphaLineSize = (self._width_n / 8) or 1
     ##! Lines are 4-byte aligned.
-    nAlphaLineSize += self._padding( nAlphaLineSize, 4 )
+    nAlphaLineSize += self._padding( self._width_n, n_bpp = 1, n_align = 4 )
     sAlpha = o_reader.readArray( nAlphaLineSize * self._height_n )
 
     nSide = self._width_n
@@ -333,8 +333,8 @@ class Bmp( object ):
         elif 32 == self._bpp_n:
           gColor = self._pixels_l[ nY ][ nX ]
           sData += struct.pack( '!BBBB', * gColor )
-      nLineSize = ((self._width_n * self._bpp_n) / 8) or 1
-      sData += '\x00' * self._padding( nLineSize, 4 )
+      nPadding = self._padding( self._width_n, self._bpp_n, n_align = 4 )
+      sData += '\x00' * nPadding
     assert len( sData ) == self._lineSize_n * self._height_n
     return sData
 
@@ -343,33 +343,38 @@ class Bmp( object ):
     sData = ''
     for nY in range( self._height_n ):
       lAccumulated = []
+      def accumulatedToData():
+        nByte = 0
+        for i, nAlpha in enumerate( lAccumulated ):
+          if not 0 == nAlpha:
+            nByte |= (1 << (7 - i))
+        return chr( nByte )
       for nX in range( self._width_n):
         lAccumulated.append( self._alpha_l[ nY ][ nX ] )
         ##  Collected one byte?
         if 8 == len( lAccumulated ):
-          nByte = 0
-          for i, nAlpha in enumerate( lAccumulated ):
-            if not 0 == nAlpha:
-              nByte |= (1 << (7 - i))
+          sData += accumulatedToData()
           lAccumulated = []
-          sData += chr( nByte )
-      sData += '\x00' * self._padding( (self._width_n / 8) or 1, 4 )
+      sData += accumulatedToData()
+      nPadding = self._padding( self._width_n, n_bpp = 1, n_align = 4 )
+      sData += '\x00' * nPadding
     return sData
 
 
-  ##x Number of bytes to add to |n_value| is it will bultipele of
-  ##  |n_multiple|.
-  def _padding( self, n_value, n_multiple ):
-    nPadding = n_multiple - n_value % n_multiple
-    if nPadding == n_multiple:
-      nPadding = 0
-    return nPadding
+  ##x Number of bytes to add for image line with |n_width| amount of
+  ##  pixels, |n_bpp| bits per pixel so it will be aligned at |n_align|
+  ##  bytes.
+  def _padding( self, n_width, n_bpp, n_align ):
+    nPaddingBits = n_align * 8 - (n_width * n_bpp) % (n_align * 8)
+    if nPaddingBits == n_align * 8:
+      nPaddingBits = 0
+    return nPaddingBits / 8
 
 
   def _lineSize( self, n_width, n_bpp ):
     ##  Bytes in horizontal line in image.
     nLineSize = ((n_width * n_bpp) / 8) or 1
     ##! Lines are 4-byte aligned.
-    nLineSize += self._padding( nLineSize, 4 )
+    nLineSize += self._padding( n_width, n_bpp, n_align = 4 )
     return nLineSize
 
