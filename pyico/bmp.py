@@ -105,6 +105,30 @@ class Bmp( object ):
     sData += self._createBitmapHeader()
     sData += self._createPalette()
     sData += self._createPixels()
+
+    ##  Create alpha mask based on image colors.
+    nSide = self._width_n
+    self._alpha_l = [ [ 0 for x in range( nSide ) ] for y in range( nSide ) ]
+    nTransparent = self._defineTransparentColor()
+    for i in range( nSide ):
+      for j in range( nSide ):
+        if self._bpp_n <= 8:
+          if self._pixels_l[ i ][ j ] == nTransparent:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+        if 24 == self._bpp_n:
+          if (0xFF, 0, 0xFF) == self._pixels_l[ i ][ j ]:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+        if 32 == self._bpp_n:
+          if self._pixels_l[ i ][ j ][ 3 ] > 128:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+    sData += self._createAlpha()
+
     return sData
 
 
@@ -283,8 +307,27 @@ class Bmp( object ):
         elif 32 == self._bpp_n:
           gColor = self._pixels_l[ nY ][ nX ]
           sData += struct.pack( '!BBBB', * gColor )
-      nFill = self._lineSize_n - ((self._width_n * self._bpp_n) / 8 or 1)
+      nFill = (((self._width_n * self._bpp_n) / 8) or 1) % 4
       sData += '\x00' * nFill
     assert len( sData ) == self._lineSize_n * self._height_n
+    return sData
+
+
+  def _createAlpha( self ):
+    sData = ''
+    for nY in range( self._height_n ):
+      lAccumulated = []
+      for nX in range( self._height_n):
+        lAccumulated.append( self._alpha_l[ nY ][ nX ] )
+        ##  Collected one byte?
+        if 8 == len( lAccumulated ):
+          nByte = 0
+          for i, nAlpha in enumerate( lAccumulated ):
+            if not 0 == nAlpha:
+              nByte |= (1 << (7 - i))
+          lAccumulated = []
+          sData += chr( nByte )
+      nFill = ((self._width_n / 8) or 1) % 4
+      sData += '\x00' * nFill
     return sData
 

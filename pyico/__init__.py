@@ -137,8 +137,8 @@ class WriterIco( binary.Writer ):
     self.write( '<H', o_image.planes_n )
     self.write( '<H', o_image.bpp_n )
 
-    self.writeOffset( '<I', o_image.index_n )
     self.writeSize( '<I', o_image.index_n )
+    self.writeOffset( '<I', o_image.index_n )
 
     self.writeArrayEnd( o_image.data_s, n_id = o_image.index_n )
 
