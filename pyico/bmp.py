@@ -133,7 +133,7 @@ class Bmp( object ):
     ##  Bytes in horizontal line in alpha mask.
     nAlphaLineSize = (self._width_n / 8) or 1
     ##! Lines are 4-byte aligned.
-    nAlphaLineSize = nAlphaLineSize  % 4
+    nAlphaLineSize += nAlphaLineSize  % 4
     sAlpha = o_reader.readArray( nAlphaLineSize * self._height_n )
 
     nSide = self._width_n
