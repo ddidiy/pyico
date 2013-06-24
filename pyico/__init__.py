@@ -72,7 +72,10 @@ class Image( object ):
 
 
   def __str__( self ):
-    return "{width_n}x{height_n}x{bpp_n}".format( ** self.__dict__ )
+    return "IMAGE: {width_n}x{height_n}x{bpp_n}".format( ** self.__dict__ )
+
+  def __repr__( self ):
+    return self.__str__()
 
 
 class ReaderIco( binary.Reader ):
