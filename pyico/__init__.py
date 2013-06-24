@@ -20,6 +20,7 @@ class Ico( object ):
   def __init__( self ):
     self.images_l = []
     self._writer_o = WriterIco()
+    self.file_s = ''
 
 
   ##  Evaluates to binary data corresponding to this icon. It can be used
@@ -160,6 +161,7 @@ def open( fp, mode = 'r' ):
   with __builtin__.open( fp, mode + 'b' ) as oFile:
     oReader = ReaderIco( oFile.read() )
   oIco = Ico()
+  oIco.file_s = fp
 
   ##  Read header
   assert 0 == oReader.read( '<H' )
