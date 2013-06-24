@@ -32,7 +32,7 @@ class Ico( object ):
     for i, oImage in enumerate( self.images_l ):
       oImage.index_n = i
       self._writer_o.writeImage( oImage )
-    return self.writer_o.data()
+    return self._writer_o.data()
 
 
 class Image( object ):
@@ -117,7 +117,7 @@ class WriterIco( binary.Writer ):
     assert nWidth <= 256
     if 256 == nWidth:
       nWidth = 0
-    self.writer_o.write( '<B', nWidth )
+    self.write( '<B', nWidth )
 
     nHeight = o_image.width_n
     assert nHeight <= 256
@@ -129,16 +129,16 @@ class WriterIco( binary.Writer ):
     ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
     ##  it for optimization reasons, bacward compatibility and tolerance to
     ##  programs that can't handle it's absence.
-    self.writer_o.write( '<B', o_image.height_n * 2 )
-    self.writer_o.write( '<B', o_image.colors_n )
-    self.writer_o.write( '<B', 0 )
-    self.writer_o.write( '<H', o_image.planes_n )
-    self.writer_o.write( '<H', o_image.bpp_n )
+    self.write( '<B', o_image.height_n * 2 )
+    self.write( '<B', o_image.colors_n )
+    self.write( '<B', 0 )
+    self.write( '<H', o_image.planes_n )
+    self.write( '<H', o_image.bpp_n )
 
-    self.writer_o.writeOffset( '<I', o_image.index_n )
-    self.writer_o.writeSize( '<I', o_image.index_n )
+    self.writeOffset( '<I', o_image.index_n )
+    self.writeSize( '<I', o_image.index_n )
 
-    self.writer_o.writeArrayEnd( o_image.data_s, n_id = o_image.index_n )
+    self.writeArrayEnd( o_image.data_s, n_id = o_image.index_n )
 
 
 def open( fp, mode = 'r' ):
