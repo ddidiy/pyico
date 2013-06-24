@@ -95,7 +95,6 @@ class ReaderIco( binary.Reader ):
     oImage.planes_n = self.read( '<H' )
     assert oImage.planes_n in [ 0, 1 ]
     oImage.bpp_n = self.read( '<H' )
-    print( oImage.width_n, oImage.height_n, oImage.bpp_n )
     nData = self.read( '<I' )
     nOffset = self.read( '<I' )
 
