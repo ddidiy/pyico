@@ -19,60 +19,20 @@ class Ico( object ):
 
   def __init__( self ):
     self.images_l = []
-    self.writer_o = binary.Writer()
+    self._writer_o = WriterIco()
 
 
   ##  Evaluates to binary data corresponding to this icon. It can be used
   ##  to write modified icon into file.
   def data( self ):
-    self.writer_o.clear()
-    self.writer_o.write( '<H', 0 )
-    self.writer_o.write( '<H', 1 )
-    self.writer_o.write( '<H', len( self.images_l ) )
+    self._writer_o.clear()
+    self._writer_o.write( '<H', 0 )
+    self._writer_o.write( '<H', 1 )
+    self._writer_o.write( '<H', len( self.images_l ) )
     for i, oImage in enumerate( self.images_l ):
       oImage.index_n = i
-      self._addDataForImage( oImage )
+      self._writer_o.writeImage( oImage )
     return self.writer_o.data()
-
-
-  def _addDataForImage( self, arg ):
-
-    oBmp = bmp.Bmp()
-    oBmp.fromBmp( arg.data_s )
-    ##  User can assign new bitmap, so reload image parameters from it.
-    arg.width_n = oBmp.width()
-    arg.height_n = oBmp.height()
-    arg.colors_n = oBmp.colors()
-    arg.planes_n = 1
-    arg.bpp_n = oBmp.bpp()
-    arg.data_s = oBmp.toIco()
-
-    nWidth = arg.width_n
-    assert nWidth <= 256
-    if 256 == nWidth:
-      nWidth = 0
-    self.writer_o.write( '<B', nWidth )
-
-    nHeight = arg.width_n
-    assert nHeight <= 256
-    if 256 == nHeight:
-      nHeight = 0
-    ##! Bitmaps in ICO contains 'AND mask', it's data is written after
-    ##  pixel data. To indicate presence of this mask, image height is
-    ##  doubled.
-    ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
-    ##  it for optimization reasons, bacward compatibility and tolerance to
-    ##  programs that can't handle it's absence.
-    self.writer_o.write( '<B', arg.height_n * 2 )
-    self.writer_o.write( '<B', arg.colors_n )
-    self.writer_o.write( '<B', 0 )
-    self.writer_o.write( '<H', arg.planes_n )
-    self.writer_o.write( '<H', arg.bpp_n )
-
-    self.writer_o.writeOffset( '<I', arg.index_n )
-    self.writer_o.writeSize( '<I', arg.index_n )
-
-    self.writer_o.writeArrayEnd( arg.data_s, n_id = arg.index_n )
 
 
 class Image( object ):
@@ -136,6 +96,49 @@ class ReaderIco( binary.Reader ):
       oImage.data_s = oBmp.toBmp()
 
     return oImage
+
+
+class WriterIco( binary.Writer ):
+
+
+  def writeImage( self, o_image ):
+
+    oBmp = bmp.Bmp()
+    oBmp.fromBmp( o_image.data_s )
+    ##  User can assign new bitmap, so reload image parameters from it.
+    o_image.width_n = oBmp.width()
+    o_image.height_n = oBmp.height()
+    o_image.colors_n = oBmp.colors()
+    o_image.planes_n = 1
+    o_image.bpp_n = oBmp.bpp()
+    o_image.data_s = oBmp.toIco()
+
+    nWidth = o_image.width_n
+    assert nWidth <= 256
+    if 256 == nWidth:
+      nWidth = 0
+    self.writer_o.write( '<B', nWidth )
+
+    nHeight = o_image.width_n
+    assert nHeight <= 256
+    if 256 == nHeight:
+      nHeight = 0
+    ##! Bitmaps in ICO contains 'AND mask', it's data is written after
+    ##  pixel data. To indicate presence of this mask, image height is
+    ##  doubled.
+    ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
+    ##  it for optimization reasons, bacward compatibility and tolerance to
+    ##  programs that can't handle it's absence.
+    self.writer_o.write( '<B', o_image.height_n * 2 )
+    self.writer_o.write( '<B', o_image.colors_n )
+    self.writer_o.write( '<B', 0 )
+    self.writer_o.write( '<H', o_image.planes_n )
+    self.writer_o.write( '<H', o_image.bpp_n )
+
+    self.writer_o.writeOffset( '<I', o_image.index_n )
+    self.writer_o.writeSize( '<I', o_image.index_n )
+
+    self.writer_o.writeArrayEnd( o_image.data_s, n_id = o_image.index_n )
 
 
 def open( fp, mode = 'r' ):
