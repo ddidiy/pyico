@@ -49,6 +49,8 @@ class Bmp( object ):
     ##  colors with violet to mark as transparent. It's not needed for
     ##  |32| bit images since they already have alpha as |4|-th byte in
     ##  each pixel.
+    ##! 32-bit .BMP has alpha channel written into every 4-th byte. Windows
+    ##  will not be able to display it, but programs like GIMP will.
     if self._bpp_n < 32:
 
       self._readAlpha( oReader )
