@@ -266,6 +266,15 @@ class Bmp( object ):
       for i, gColor in enumerate( self._palette_l ):
         if (0xFF, 0, 0xFF) == gColor:
           return i
+      ##  If not available, search for index that is not used in image.
+      lColorsUsed = [ False ] * 16
+      for i in range( self._height_n ):
+        for j in range( self._width_n ):
+          lColorsUsed[ self._pixels_l[ i ][ j ] ] = True
+      for i in range( len( lColorsUsed ) ):
+        if not lColorsUsed[ i ]:
+          self._palette_l[ i ] = (0xFF, 0, 0xFF)
+          return i
     ##  In case of 256 colors palette use color with index 255 as
     ##  transparent and change it's palette color to violet.
     if 8 == self._bpp_n:
