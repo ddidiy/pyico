@@ -130,6 +130,8 @@ class WriterIco( binary.Writer ):
     ##  it for optimization reasons, bacward compatibility and tolerance to
     ##  programs that can't handle it's absence.
     self.write( '<B', o_image.height_n * 2 )
+    if 256 == o_image.colors_n:
+      o_image.colors_n = 0
     self.write( '<B', o_image.colors_n )
     self.write( '<B', 0 )
     self.write( '<H', o_image.planes_n )

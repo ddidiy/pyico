@@ -86,7 +86,14 @@ class Bmp( object ):
   ##x Decodes BMP information from uncompressed .BMP file and stores it in
   ##  internal representation.
   def fromBmp( self, s_data ):
-    pass
+
+    oReader = binary.Reader( s_data )
+    ##  Skip BITMAPFILEHEADER
+    oReader.readArray( BITMAPFILEHEADER_SIZE )
+    ##  Read BITMAPINFOHEADER and place data into object private fields.
+    self._readBitmapHeader( oReader )
+    self._readPalette( oReader )
+    self._readPixels( oReader )
 
 
   ##  Evaluates to binary representation of loaded image that can be stored
