@@ -102,7 +102,7 @@ class Bmp( object ):
   def toIco( self ):
 
     sData = ''
-    sData += self._createBitmapHeader()
+    sData += self._createBitmapHeader( f_ico = True )
     sData += self._createPalette()
     sData += self._createPixels()
 
@@ -174,11 +174,17 @@ class Bmp( object ):
     o_reader.read( '<I' )
 
 
-  def _createBitmapHeader( self ):
+  def _createBitmapHeader( self, f_ico = False ):
     return struct.pack( '<IIIHHIIiiII',
       BITMAPINFOHEADER_SIZE,
       self._width_n,
-      self._height_n,
+      ##! Bitmaps in ICO contains 'AND mask', it's data is written after
+      ##  pixel data. To indicate presence of this mask, image height is
+      ##  doubled.
+      ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
+      ##  it for optimization reasons, bacward compatibility and tolerance to
+      ##  programs that can't handle it's absence.
+      self._height_n * 2 if f_ico else self._height_n,
       ##  Number of color planes.
       1,
       self._bpp_n,

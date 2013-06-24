@@ -123,13 +123,7 @@ class WriterIco( binary.Writer ):
     assert nHeight <= 256
     if 256 == nHeight:
       nHeight = 0
-    ##! Bitmaps in ICO contains 'AND mask', it's data is written after
-    ##  pixel data. To indicate presence of this mask, image height is
-    ##  doubled.
-    ##! 32-bit images may skip 'AND mask', but it's a good pactice to keep
-    ##  it for optimization reasons, bacward compatibility and tolerance to
-    ##  programs that can't handle it's absence.
-    self.write( '<B', o_image.height_n * 2 )
+    self.write( '<B', o_image.height_n )
     if 256 == o_image.colors_n:
       o_image.colors_n = 0
     self.write( '<B', o_image.colors_n )
