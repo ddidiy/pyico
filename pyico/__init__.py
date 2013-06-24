@@ -35,6 +35,15 @@ class Ico( object ):
     return self._writer_o.data()
 
 
+  ##  Adds new image from uncompressed .bmp file content.
+  def addFromBmp( self, s_data ):
+    oBmp = bmp.Bmp()
+    oBmp.fromBmp( s_data )
+    oImage = Image()
+    oImage.initFromBmp( oBmp )
+    self.images_l.appen( oImage )
+
+
 class Image( object ):
 
 
@@ -51,6 +60,15 @@ class Image( object ):
     ##  0-based index of this image inside .ico. Used by writer to
     ##  distinguish images in order to correctly write offset/sizes.
     self.index_n = None
+
+
+  def initFromBmp( self, o_bmp ):
+    oImage.width_n = o_bmp.width()
+    oImage.height_n = o_bmp.height()
+    oImage.colors_n = o_bmp.colors()
+    oImage.planes_n = 1
+    oImage.bpp_n = o_bmp.bpp()
+    oImage.data_s = o_bmp.toIco()
 
 
   def __str__( self ):
@@ -106,12 +124,7 @@ class WriterIco( binary.Writer ):
     oBmp = bmp.Bmp()
     oBmp.fromBmp( o_image.data_s )
     ##  User can assign new bitmap, so reload image parameters from it.
-    o_image.width_n = oBmp.width()
-    o_image.height_n = oBmp.height()
-    o_image.colors_n = oBmp.colors()
-    o_image.planes_n = 1
-    o_image.bpp_n = oBmp.bpp()
-    o_image.data_s = oBmp.toIco()
+    o_image.initFromBmp( oBmp )
 
     nWidth = o_image.width_n
     assert nWidth <= 256
