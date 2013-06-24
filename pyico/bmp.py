@@ -35,6 +35,22 @@ class Bmp( object ):
     self._alpha_l = []
 
 
+  def width( self ):
+    return self._width_n
+
+
+  def height( self ):
+    return self._height_n
+
+
+  def colors( self ):
+    return self._colors_n
+
+
+  def bpp( self ):
+    return self._bpp_n
+
+
   ##x Decodes BMP information from .ICO file and stores it in internal
   ##  representation.
   def fromIco( self, s_data ):
@@ -77,7 +93,112 @@ class Bmp( object ):
   ##  inside .ICO file. |width|, |height| etc can be used to construct
   ##  information section in ICO file.
   def toIco( self ):
-    pass
+
+    """
+    BITMAPFILEHEADER_SIZE = 14
+    BITMAPINFOHEADER_SIZE = 40
+    HEADERS_SIZE = BITMAPFILEHEADER_SIZE + BITMAPINFOHEADER_SIZE
+
+    oReader = binary.Reader( arg.data_s )
+    oReader.readArray( BITMAPFILEHEADER_SIZE )
+
+    assert BITMAPINFOHEADER_SIZE == oReader.read( '<I' )
+    nWidth, nHeight = oReader.read( '<II' )
+    ##! Height counts alpha channel mask as a separate image.
+    nHeight = nWidth
+    ##  Number of color planes.
+    assert 1 == oReader.read( '<H' )
+    nBpp = oReader.read( '<H' )
+    assert nBpp in [ 1, 4, 8, 16, 24, 32 ]
+    nCompression = oReader.read( '<I' )
+    nImageSize = oReader.read( '<I' )
+    ##  Bytes in horizontal line in image.
+    nLineSize = ((nWidth * nBpp) / 8) or 1
+    ##! Lines are 4-byte aligned.
+    nLineSize += nLineSize % 4
+    ##  Can be 0 for uncompressed bitmaps.
+    if 0 == nImageSize:
+      nImageSize = nLineSize * nHeight
+    nResolutionCx, nResolutionCy = oReader.read( '<ii' )
+    nColorsInPalette = oReader.read( '<I' )
+    if 0 == nColorsInPalette and nBpp <= 8:
+      nColorsInPalette = pow( 2, nBpp )
+    nColorsInPaletteImportant = oReader.read( '<I' )
+
+    sPalette = oReader.readArray( nColorsInPalette * 4 )
+    sPixels = oReader.readArray( nImageSize )
+
+    arg.width_n = nWidth
+    arg.height_n = nHeight
+    arg.colors_n = nColorsInPalette
+    if 256 == arg.colors_n:
+      arg.colors_n = 0
+    arg.bpp_n = nBpp
+
+    ##  In case of 16 colors use violet as transparent color, if
+    ##  available.
+    nTransparentColorIndex = None
+    for i in range( arg.colors_n ):
+      r, g, b, a = struct.unpack( '!BBBB', sPalette[ i * 4 : i * 4 + 4 ] )
+      if 0xFF == r and 0 == g and 0xFF == b:
+        nTransparentColorIndex = i
+    ##  In case of 256 colors palette use color with index 255 as
+    ##  transparent and change it's palette color to violet.
+    if 8 == arg.bpp_n:
+      sPalette = sPalette[ : -4 ] + struct.pack( '!BBBB', 0xFF, 0, 0xFF, 0 )
+      nTransparentColorIndex = 0xFF
+
+    lAlpha = []
+    for i in range( nHeight ):
+      for j in range( nWidth ):
+        fTransparent = False
+        if 4 == arg.bpp_n:
+          assert nTransparentColorIndex is not None
+          nOffsetInBytes = i * nLineSize + (j * arg.bpp_n) / 8
+          nByte = ord( sPixels[ nOffsetInBytes ] )
+          nOffsetInBits = i * nLineSize * 8 + j * arg.bpp_n
+          ##* Offset inside byte.
+          nOffset = nOffsetInBits - nOffsetInBytes * 8
+          if 0 == nOffset:
+            nColor = nByte >> 4
+          if 4 == nOffset:
+            nColor = nByte & 0xF
+          if nColor == nTransparentColorIndex:
+            fTransparent = True
+        ##  For 8 bits per pixel mark transparent with color in
+        ##  paleter with index 255:
+        if 8 == arg.bpp_n:
+          nOffsetInBytes = i * nLineSize + (j * arg.bpp_n) / 8
+          if 255 == ord( sPixels[ nOffsetInBytes ] ):
+            fTransparent = True
+        if 24 == arg.bpp_n:
+          nOffsetInBytes = i * nLineSize + (j * arg.bpp_n) / 8
+          if chr( 0xFF ) == sPixels[ nOffsetInBytes + 0 ] and \
+             chr( 0 )    == sPixels[ nOffsetInBytes + 1 ] and \
+             chr( 0xFF ) == sPixels[ nOffsetInBytes + 2 ]:
+            fTransparent = True
+        if 32 == arg.bpp_n:
+          nOffsetInBytes = i * nLineSize + (j * arg.bpp_n) / 8
+          if ord( sPixels[ nOffsetInBytes + 3 ] ) < 128:
+            fTransparent = True
+        lAlpha.append( fTransparent )
+
+    ##  Bytes in horizontal line in alpha mask.
+    nAlphaLineSize = (nWidth / 8) or 1
+    ##! Lines are 4-byte aligned.
+    nAlphaLineSize += nAlphaLineSize % 4
+
+    lAlphaBytes = [ 0 ] * (nAlphaLineSize * nHeight)
+    for i in range( nHeight ):
+      for j in range( nWidth ):
+        nOffset = i * nAlphaLineSize + j / 8
+        nByte = lAlphaBytes[ nOffset ]
+        nMask = 1 if lAlpha[ i * nWidth + j ] else 0
+        nByte |= (nMask << (j % 8))
+        lAlphaBytes[ nOffset ] = nByte
+      lAlphaBytes.extend( [ 0 ] * (nAlphaLineSize - nWidth / 8) )
+    arg.data_s += ''.join( [ chr( s ) for s in lAlphaBytes ] )
+    """
 
 
   ##  Evaluates to binary representation of loaded image that can be
