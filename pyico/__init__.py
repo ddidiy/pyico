@@ -43,7 +43,7 @@ class Ico( object ):
     oImage = Image()
     oImage.initFromBmp( oBmp )
     oImage.data_s = oBmp.toBmp()
-    self.images_l.appen( oImage )
+    self.images_l.append( oImage )
 
 
 class Image( object ):
