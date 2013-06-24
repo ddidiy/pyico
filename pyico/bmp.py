@@ -71,6 +71,7 @@ class Bmp( object ):
 
       self._readAlpha( oReader )
       nTransparent = self._defineTransparentColor()
+      assert nTransparent is not None
 
       ##  Actual color replacement.
       for i in range( self._height_n ):
