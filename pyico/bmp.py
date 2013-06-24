@@ -118,7 +118,7 @@ class Bmp( object ):
           else:
             self._alpha_l[ i ][ j ] = 0
         if 24 == self._bpp_n:
-          if (0xFF, 0, 0xFF) == self._pixels_l[ i ][ j ]:
+          if (0xFF, 0, 0xFF) == self._pixels_l[ i ][ j ][ : 3 ]:
             self._alpha_l[ i ][ j ] = 1
           else:
             self._alpha_l[ i ][ j ] = 0
