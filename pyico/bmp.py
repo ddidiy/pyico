@@ -164,7 +164,7 @@ class Bmp( object ):
     ##  Bytes in horizontal line in image.
     self._lineSize_n = ((self._width_n * self._bpp_n) / 8) or 1
     ##! Lines are 4-byte aligned.
-    self._lineSize_n += self._lineSize_n % 4
+    self._lineSize_n += self._padding( self._lineSize_n, 4 )
     ##  Can be 0 for uncompressed bitmaps.
     assert 0 == nImageSize or nImageSize >= self._lineSize_n * self._height_n
 
@@ -214,7 +214,7 @@ class Bmp( object ):
     ##  Bytes in horizontal line in alpha mask.
     nAlphaLineSize = (self._width_n / 8) or 1
     ##! Lines are 4-byte aligned.
-    nAlphaLineSize += nAlphaLineSize  % 4
+    nAlphaLineSize += self._padding( nAlphaLineSize, 4 )
     sAlpha = o_reader.readArray( nAlphaLineSize * self._height_n )
 
     nSide = self._width_n
@@ -326,8 +326,8 @@ class Bmp( object ):
         elif 32 == self._bpp_n:
           gColor = self._pixels_l[ nY ][ nX ]
           sData += struct.pack( '!BBBB', * gColor )
-      nFill = (((self._width_n * self._bpp_n) / 8) or 1) % 4
-      sData += '\x00' * nFill
+      nLineWidth = ((self._width_n * self._bpp_n) / 8) or 1
+      sData += '\x00' * self._padding( nLineWidth, 4 )
     assert len( sData ) == self._lineSize_n * self._height_n
     return sData
 
@@ -346,7 +346,15 @@ class Bmp( object ):
               nByte |= (1 << (7 - i))
           lAccumulated = []
           sData += chr( nByte )
-      nFill = ((self._width_n / 8) or 1) % 4
-      sData += '\x00' * nFill
+      sData += '\x00' * self._padding( (self._width_n / 8) or 1, 4 )
     return sData
+
+
+  ##x Number of bytes to add to |n_value| is it will bultipele of
+  ##  |n_multiple|.
+  def _padding( self, n_value, n_multiple ):
+    nPadding = n_multiple - n_value % n_multiple
+    if nPadding == n_multiple:
+      nPadding = 0
+    return nPadding
 
