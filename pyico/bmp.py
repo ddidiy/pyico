@@ -70,8 +70,9 @@ class Bmp( object ):
     if self._bpp_n < 32:
 
       self._readAlpha( oReader )
-      nTransparent = self._defineTransparentColor()
-      assert nTransparent is not None
+      if self._bpp_n <= 8:
+        nTransparent = self._defineTransparentColor()
+        assert nTransparent is not None
 
       ##  Actual color replacement.
       for i in range( self._height_n ):
@@ -275,6 +276,8 @@ class Bmp( object ):
         if not lColorsUsed[ i ]:
           self._palette_l[ i ] = (0xFF, 0, 0xFF)
           return i
+      else:
+        assert False, "no free colors to use as transparent"
     ##  In case of 256 colors palette use color with index 255 as
     ##  transparent and change it's palette color to violet.
     if 8 == self._bpp_n:
