@@ -108,6 +108,28 @@ class Bmp( object ):
       for i in range( self._height_n ):
         for j in range( self._width_n ):
           assert self._pixels_l[ i ][ j ] < pow( 2, n_bpp )
+    ##  Create alpha mask based on image colors.
+    nSide = self._width_n
+    self._alpha_l = [ [ 0 for x in range( nSide ) ] for y in range( nSide ) ]
+    nTransparent = self._defineTransparentColor()
+    for i in range( nSide ):
+      for j in range( nSide ):
+        if self._bpp_n <= 8:
+          if self._pixels_l[ i ][ j ] == nTransparent:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+        if 24 == self._bpp_n:
+          if (0xFF, 0, 0xFF) == self._pixels_l[ i ][ j ][ : 3 ]:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+        if 32 == self._bpp_n:
+          if self._pixels_l[ i ][ j ][ 3 ] > 128:
+            self._alpha_l[ i ][ j ] = 1
+          else:
+            self._alpha_l[ i ][ j ] = 0
+    print( self._alpha_l ) )
 
 
   ##  Constructs image from raw 32-bit data in 'RGBA' fromat, first 4
@@ -144,28 +166,6 @@ class Bmp( object ):
     sData += self._createBitmapHeader( f_ico = True )
     sData += self._createPalette()
     sData += self._createPixels()
-
-    ##  Create alpha mask based on image colors.
-    nSide = self._width_n
-    self._alpha_l = [ [ 0 for x in range( nSide ) ] for y in range( nSide ) ]
-    nTransparent = self._defineTransparentColor()
-    for i in range( nSide ):
-      for j in range( nSide ):
-        if self._bpp_n <= 8:
-          if self._pixels_l[ i ][ j ] == nTransparent:
-            self._alpha_l[ i ][ j ] = 1
-          else:
-            self._alpha_l[ i ][ j ] = 0
-        if 24 == self._bpp_n:
-          if (0xFF, 0, 0xFF) == self._pixels_l[ i ][ j ][ : 3 ]:
-            self._alpha_l[ i ][ j ] = 1
-          else:
-            self._alpha_l[ i ][ j ] = 0
-        if 32 == self._bpp_n:
-          if self._pixels_l[ i ][ j ][ 3 ] > 128:
-            self._alpha_l[ i ][ j ] = 1
-          else:
-            self._alpha_l[ i ][ j ] = 0
     sData += self._createAlpha()
 
     return sData
@@ -185,11 +185,16 @@ class Bmp( object ):
 
   ##  Evaluates to 8-bit alpha array, first item is top-left corner.
   def alpha( self ):
-    assert 32 == self._bpp_n
     sAlpha = ''
     for i in range( self._height_n ):
       for j in range( self._width_n ):
-        sAlpha += chr( self._pixels_l[ self._height_n - i - 1 ][ j ][ 3 ] )
+        if 32 == self._bpp_n:
+          sAlpha += chr( self._pixels_l[ self._height_n - i - 1 ][ j ][ 3 ] )
+        else:
+          if 1 == self._alpha_l[ i ][ j ]:
+            sAlpha += chr( 0xFF )
+          else:
+            sAlpha += chr( 0 )
     return sAlpha
 
 
