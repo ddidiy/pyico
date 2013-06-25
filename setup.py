@@ -42,11 +42,7 @@ setuptools.setup(
   packages     = [ NAME_SHORT ],
   zip_safe     = True,
   install_requires = [],
-  entry_points = {
-    'console_scripts': [
-      '{0} = {0}:main'.format( NAME_SHORT ),
-    ],
-  },
+  entry_points = {},
   ##  http://pypi.python.org/pypi?:action=list_classifiers
   classifiers  = [
     ('Development Status :: 1 - Planning'),
