@@ -10,8 +10,14 @@
 import os
 import pyico
 
-oIco = pyico.open( "test.ico" )
-open( "out.ico", 'wb' ).write( oIco.data() )
-oIco = pyico.open( "out.ico" )
-open( "out.bmp", 'wb' ).write( oIco.images_l[ 0 ].data_s )
+oIco = pyico.open( 'test.ico' )
+with open( 'out.ico', 'wb' ) as oFile:
+  oFile.write( oIco.data() )
+oIco = pyico.open( 'out.ico' )
+with open( 'out.bmp', 'wb' ) as oFile:
+  oFile.write( oIco.images_l[ 0 ].data_s )
+oIco.images_l = []
+oIco.addFromBmp( open( 'out.bmp', 'rb' ).read() )
+with open( 'out.ico', 'wb' ) as oFile:
+  oFile.write( oIco.data() )
 
