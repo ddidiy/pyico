@@ -125,11 +125,10 @@ class Bmp( object ):
           else:
             self._alpha_l[ i ][ j ] = 0
         if 32 == self._bpp_n:
-          if self._pixels_l[ i ][ j ][ 3 ] > 128:
+          if self._pixels_l[ i ][ j ][ 3 ] < 128:
             self._alpha_l[ i ][ j ] = 1
           else:
             self._alpha_l[ i ][ j ] = 0
-    print( self._alpha_l ) )
 
 
   ##  Constructs image from raw 32-bit data in 'RGBA' fromat, first 4
@@ -191,10 +190,10 @@ class Bmp( object ):
         if 32 == self._bpp_n:
           sAlpha += chr( self._pixels_l[ self._height_n - i - 1 ][ j ][ 3 ] )
         else:
-          if 1 == self._alpha_l[ i ][ j ]:
-            sAlpha += chr( 0xFF )
-          else:
+          if 1 == self._alpha_l[ self._height_n - i - 1 ][ j ]:
             sAlpha += chr( 0 )
+          else:
+            sAlpha += chr( 0xFF )
     return sAlpha
 
 
@@ -310,14 +309,13 @@ class Bmp( object ):
 
 
   def _defineTransparentColor( self ):
-    if 4 == self._bpp_n:
-      ##  In case of 16 colors use violet as transparent color, if
-      ##  available.
+    if self._bpp_n <= 8:
+      ##  Use violet as transparent color, if available.
       for i, gColor in enumerate( self._palette_l ):
         if (0xFF, 0, 0xFF) == gColor:
           return i
       ##  If not available, search for index that is not used in image.
-      lColorsUsed = [ False ] * 16
+      lColorsUsed = [ False ] * pow( 2, self._bpp_n )
       for i in range( self._height_n ):
         for j in range( self._width_n ):
           lColorsUsed[ self._pixels_l[ i ][ j ] ] = True
@@ -327,11 +325,7 @@ class Bmp( object ):
           return i
       else:
         assert False, "no free colors to use as transparent"
-    ##  In case of 256 colors palette use color with index 255 as
-    ##  transparent and change it's palette color to violet.
-    if 8 == self._bpp_n:
-      self._palette_l[ 0xFF ] = (0xFF, 0, 0xFF)
-      return 0xFF
+    return None
 
 
   def _createFileHeader( self ):
