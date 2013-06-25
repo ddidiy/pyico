@@ -54,6 +54,18 @@ class Ico( object ):
     self.images_l.append( oImage )
 
 
+  ##x Adds new image from raw 32-bit data in 'RGBA' fromat, first 4
+  ##  bytes are top-left corner.
+  def addFromRaw( self, s_data, n_width, n_height, n_bpp ):
+    assert 32 == n_bpp
+
+    oBmp = bmp.Bmp()
+    oBmp.fromRaw( s_data, n_width, n_height, n_bpp )
+    oImage = Image()
+    oImage.initFromBmp( oBmp )
+    self.images_l.append( oImage )
+
+
 class Image( object ):
 
 
@@ -79,6 +91,12 @@ class Image( object ):
     self.planes_n = 1
     self.bpp_n = o_bmp.bpp()
     self.data_s = o_bmp.toBmp()
+
+
+  def alpha( self ):
+    oBmp = bmp.Bmp()
+    oBmp.fromBmp( self.data_s )
+    return oBmp.alpha()
 
 
   def __str__( self ):

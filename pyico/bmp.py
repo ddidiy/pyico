@@ -26,6 +26,8 @@ class Bmp( object ):
     self._resCy_n = 0
     ##  Colors in palette.
     self._colors_n = 0
+    ##  Width of single line in image data, in bytes.
+    self._lineSize_n = 0
     ##  List of (r, g, b) tuples.
     self._palette_l = []
     ##  Two-dimenshional array. If |self._bpp_n| <= 8, contains indexes
@@ -108,6 +110,31 @@ class Bmp( object ):
           assert self._pixels_l[ i ][ j ] < pow( 2, n_bpp )
 
 
+  ##  Constructs image from raw 32-bit data in 'RGBA' fromat, first 4
+  ##  bytes are top-left corner.
+  def fromRaw( self, s_data, n_width, n_height, n_bpp ):
+    assert 32 == n_bpp
+
+    self._width_n = n_width
+    self._height_n = n_height
+    self._bpp_n = n_bpp
+    self._resCx_n = 0
+    self._resCy_n = 0
+    self._colors_n = 0
+    self._lineSize_n = self._lineSize( self._width_n, self._bpp_n )
+    self._palette_l = []
+    self._alpha_l = []
+    nSide = self._width_n
+    self._pixels_l = [ [ 0 for x in range( nSide ) ] for y in range( nSide ) ]
+    for i in range( self._height_n ):
+      for j in range( self._width_n ):
+        self._pixels_l[ self._height_n - i - 1 ][ j ] = (
+          ord( s_data[ (i * self._width_n + j) * 4 + 0 ] ),
+          ord( s_data[ (i * self._width_n + j) * 4 + 1 ] ),
+          ord( s_data[ (i * self._width_n + j) * 4 + 2 ] ),
+          ord( s_data[ (i * self._width_n + j) * 4 + 3 ] ) )
+
+
   ##  Evaluates to binary representation of loaded image that can be stored
   ##  inside .ICO file. |width|, |height| etc can be used to construct
   ##  information section in ICO file.
@@ -154,6 +181,16 @@ class Bmp( object ):
     sData += self._createPalette()
     sData += self._createPixels()
     return sData
+
+
+  ##  Evaluates to 8-bit alpha array, first item is top-left corner.
+  def alpha( self ):
+    assert 32 == self._bpp_n
+    sAlpha = ''
+    for i in range( self._height_n ):
+      for j in range( self._width_n ):
+        sAlpha += chr( self._pixels_l[ self._height_n - i - 1 ][ j ][ 3 ] )
+    return sAlpha
 
 
   def _readBitmapHeader( self, o_reader ):
